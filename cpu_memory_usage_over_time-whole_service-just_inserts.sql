@@ -16,9 +16,9 @@ WITH
         SELECT
             toStartOfInterval(event_time, toIntervalSecond(interval_seconds)) AS t,
             dateDiff('second', toStartOfInterval(start_time, toIntervalSecond(interval_seconds)), t) AS seconds,
-            round(avg(metric_cpu) / 1_000_000, 2) as cpu_usage,
-            round(avg(metric_memory))  as memory_usage,
-            formatReadableSize(memory_usage) as memory_usage_readable
+            round(avg(metric_cpu) / 1_000_000, 2) AS cpu_usage,
+            round(avg(metric_memory))  AS memory_usage,
+            formatReadableSize(memory_usage) AS memory_usage_readable
         FROM (
             SELECT event_time, sum(ProfileEvents['OSCPUVirtualTimeMicroseconds']) AS metric_cpu, sum(memory_usage) AS metric_memory
               FROM clusterAllReplicas(default, system.query_log)
