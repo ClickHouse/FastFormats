@@ -1,8 +1,5 @@
 #!/bin/bash
 
-
-# ./multi_threaded_ingest.sh 1 multi_threaded_ingest_test06 '/home/ubuntu/data/hits/split/native_100000_sorted' http Native 100000 true lz4 default '6grftF_BEpNIn' 'https://hvaygj2uti.us-east-2.aws.clickhouse.cloud:8443'
-
 # General information variables
 CLIENT_MACHINE="m6i.8xlarge, 10000gib gp3"
 SERVER_SYSTEM="ClickHouse Cloud 24.10 30 vCPU and 120 GiB per replica / 3 replicas"
