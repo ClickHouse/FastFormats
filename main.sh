@@ -215,7 +215,9 @@ save_json_metrics() {
     metrics_file=$(get_server_metrics_file "$interface" "$format" "$sorted" "$compressor" "$batch_size")
     metrics_content=$(grep -v -E "^Row 1:|^──────" "$metrics_file" 2>/dev/null | awk '{
         key=$1;
-        value=substr($0, index($0, $2));
+        sub(/:$/, "", key);  # Remove trailing colon from key
+        $1="";               # Remove the key from the line
+        value=substr($0, 2); # Trim leading space
         if (value ~ /[A-Za-z]/) {
             print "    \"" key "\": \"" value "\",";
         } else {
