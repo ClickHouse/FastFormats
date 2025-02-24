@@ -3,10 +3,6 @@
 TEST_MODE="false"
 # TEST_MODE="true"
 
-
-
-
-
 # Read ClickHouse credentials from environment variables
 CLICKHOUSE_USER="${CLICKHOUSE_USER:?Environment variable CLICKHOUSE_USER is not set}"
 CLICKHOUSE_PASSWORD="${CLICKHOUSE_PASSWORD:?Environment variable CLICKHOUSE_PASSWORD is not set}"
@@ -89,19 +85,6 @@ get_server_metrics_query_file() {
     echo "$RESULT_SNIPPETS_DIR/${OUTPUT_PREFIX}_${interface}_${format_lower}_${batch_size}_$( [ "$sorted" == "true" ] && echo "sorted" || echo "unsorted" )_${compressor_label}.server_metrics.sql"
 }
 
-get_cpu_memory_file() {
-    local interface="$1"
-    local format="$2"
-    local sorted="$3"
-    local compressor="$4"
-    local batch_size="$5"
-    local format_lower=$(echo "$format" | tr '[:upper:]' '[:lower:]')
-
-    local compressor_label=$( [ "$compressor" == "none" ] && echo "no_compression" || echo "$compressor" )
-
-    echo "$RESULT_SNIPPETS_DIR/${OUTPUT_PREFIX}_${interface}_${format_lower}_${batch_size}_$( [ "$sorted" == "true" ] && echo "sorted" || echo "unsorted" )_${compressor_label}.cpu_memory"
-}
-
 convert() {
     local batch_size="$1"
     local format="$2"
@@ -162,7 +145,6 @@ ingest() {
 
     local server_metrics_file=$(get_server_metrics_file "$interface" "$format" "$sorted" "$compressor" "$batch_size")
     local server_metrics_query_file=$(get_server_metrics_query_file "$interface" "$format" "$sorted" "$compressor" "$batch_size")
-    local cpu_memory_file=$(get_cpu_memory_file "$interface" "$format" "$sorted" "$compressor" "$batch_size")
 
     TABLE_NAME="hits"
     TIMESTAMP=$(date +"%Y_%m_%d_%H_%M")
@@ -193,11 +175,6 @@ ingest() {
     curl --user "$CLICKHOUSE_USER:$CLICKHOUSE_PASSWORD" --data-binary "$METRICS_QUERY" "$CLICKHOUSE_HOST/?database=system&query=" > "$server_metrics_file"
     echo "Metrics collected. Results saved to $server_metrics_file"
 
-    echo -e "\nRunning CPU and memory usage query for database: $DATABASE_NAME"
-    CPU_MEMORY_QUERY=$(sed "s/{db_name}/$DATABASE_NAME/g; s/{table_name}/$TABLE_NAME/g" cpu_memory_usage_over_time-just_inserts.sql)
-    curl --user "$CLICKHOUSE_USER:$CLICKHOUSE_PASSWORD" --data-binary "$CPU_MEMORY_QUERY" "$CLICKHOUSE_HOST/?database=system&query=" > "$cpu_memory_file"
-    echo "CPU and memory usage collected. Results saved to $cpu_memory_file"
-
     ./drop_db.sh "$DATABASE_NAME" "$CLICKHOUSE_USER" "$CLICKHOUSE_PASSWORD" "$CLICKHOUSE_HOST"
 }
 
@@ -225,9 +202,6 @@ save_json_metrics() {
         }
     }' | sed '$s/,$//')
 
-    # Get CPU memory usage
-    cpu_memory_file=$(get_cpu_memory_file "$interface" "$format" "$sorted" "$compressor" "$batch_size")
-    cpu_memory_usage=$(grep "cpu_memory:" "$cpu_memory_file" 2>/dev/null | sed 's/cpu_memory: //g' | tr -d '\n')
 
     # Determine compression type
     if [[ "$interface" == "native" ]]; then
@@ -239,8 +213,7 @@ save_json_metrics() {
     fi
 
     # Create JSON file
-    echo -e "{\n  \"client_machine\": \"$CLIENT_MACHINE\",\n  \"server_system\": \"$SERVER_SYSTEM\",\n  \"date\": \"$DATE_TODAY\",\n  \"interface\": \"$interface\",\n  \"format\": \"$format\",\n  \"total_num_rows\": $TOTAL_NUM_ROWS,\n  \"batch_size\": $batch_size,\n  \"sorted\": $sorted,\n  \"compressor\": \"$compressor\",\n  \"compression_type\": \"$compression_type\",\n  \"server_metrics\": {\n$metrics_content\n  },\n  \"cpu_memory_usage\": \"$cpu_memory_usage\"\n}" > "$json_filename"
-
+    echo -e "{\n  \"client_machine\": \"$CLIENT_MACHINE\",\n  \"server_system\": \"$SERVER_SYSTEM\",\n  \"date\": \"$DATE_TODAY\",\n  \"interface\": \"$interface\",\n  \"format\": \"$format\",\n  \"total_num_rows\": $TOTAL_NUM_ROWS,\n  \"batch_size\": $batch_size,\n  \"sorted\": $sorted,\n  \"compressor\": \"$compressor\",\n  \"compression_type\": \"$compression_type\",\n  \"server_metrics\": {\n$metrics_content\n  }\n}" > "$json_filename"
     echo "JSON results saved to $json_filename"
 }
 

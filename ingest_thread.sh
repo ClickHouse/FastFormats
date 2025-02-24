@@ -2,8 +2,9 @@
 
 # Ensure required parameters are provided
 if [ $# -lt 8 ]; then
-    echo -e "\nUsage: $0 THREAD_ID DATABASE_NAME DIRECTORY FORMAT COMPRESSOR CLICKHOUSE_USER CLICKHOUSE_PASSWORD CLICKHOUSE_HOST\n"
-    echo "Example (no compression): $0 1 my_database /path/to/files TabSeparated none user pass https://clickhouse-host:8443"
+    echo -e "\nUsage: $0 THREAD_ID DATABASE_NAME DIRECTORY FORMAT COMPRESSOR CLICKHOUSE_USER CLICKHOUSE_PASSWORD CLICKHOUSE_HOST [LIMIT]"
+    echo "Example (no compression, no limit): $0 1 my_database /path/to/files TabSeparated none user pass https://clickhouse-host:8443"
+    echo "Example (limit to 5 files): $0 1 my_database /path/to/files TabSeparated none user pass https://clickhouse-host:8443 5"
     exit 1
 fi
 
@@ -16,6 +17,7 @@ COMPRESSOR="$5"
 CLICKHOUSE_USER="$6"
 CLICKHOUSE_PASSWORD="$7"
 CLICKHOUSE_HOST="$8"
+LIMIT="${9:-0}"  # Default to 0 (no limit)
 
 # Table name (assumed to be 'hits')
 TABLE_NAME="hits"
@@ -31,6 +33,10 @@ if [ ! -d "$DIRECTORY" ]; then
     echo "[Thread $THREAD_ID] Error: Directory '$DIRECTORY' not found!" | tee -a "$ERROR_LOG"
     exit 1
 fi
+
+# Log thread start
+echo -e "[Thread $THREAD_ID] $(date +"%Y-%m-%d %H:%M:%S") - Started processing for database '$DATABASE_NAME' in directory '$DIRECTORY' (Limit: $LIMIT files)"
+
 
 # Function to ingest a file via HTTP interface
 ingest_file_via_http_interface() {
@@ -91,7 +97,6 @@ ingest_file_via_http_interface() {
     local response
     response=$("${curl_cmd[@]}" 2>&1)
 
-
     # Check for "out of memory" error and retry
     if echo "$response" | grep -q "out of memory"; then
         echo "[Thread $THREAD_ID] Memory issue detected. Retrying with streaming mode (-T)..." | tee -a "$ERROR_LOG"
@@ -115,17 +120,28 @@ ingest_file_via_http_interface() {
 # Get list of files, sorted
 FILES=$(ls -1 "$DIRECTORY" | sort)
 
+# Counter for limiting ingestion
+COUNT=0
+
 # Iterate over the list of files
 for file in $FILES; do
     FILE_PATH="$DIRECTORY/$file"
 
+    # Stop if limit is reached
+    if [ "$LIMIT" -gt 0 ] && [ "$COUNT" -ge "$LIMIT" ]; then
+        echo "[Thread $THREAD_ID] Reached ingestion limit of $LIMIT files. Stopping."
+        break
+    fi
+
     # Ensure it's a regular file
     if [ -f "$FILE_PATH" ]; then
         ingest_file_via_http_interface "$FILE_PATH"
+        ((COUNT++))
     fi
 done
 
-echo -e "[Thread $THREAD_ID] All files have been processed. Check '$ERROR_LOG' for any errors."
+# Log thread completion
+echo -e "[Thread $THREAD_ID] $(date +"%Y-%m-%d %H:%M:%S") - Processed $COUNT files. Check '$ERROR_LOG' for any errors."
 
 # Cleanup temp directory
 rm -rf "$TEMP_DIR"

@@ -109,6 +109,7 @@ CREATE TABLE hits
 )
 ENGINE = MergeTree
 SETTINGS
+--     old_parts_lifetime = 1,
     parts_to_delay_insert = 10_000,
     inactive_parts_to_delay_insert = 10_000,
     parts_to_throw_insert = 10_000,
