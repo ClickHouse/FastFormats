@@ -6,10 +6,16 @@ SERVER_SYSTEM="ClickHouse Cloud 24.10 30 vCPU and 120 GiB per replica / 3 replic
 DATE_TODAY=$(date +"%Y-%m-%d")
 TOTAL_NUM_ROWS=10000000
 
+
+# Read ClickHouse credentials from environment variables
+CLICKHOUSE_USER="${CLICKHOUSE_USER:?Environment variable CLICKHOUSE_USER is not set}"
+CLICKHOUSE_PASSWORD="${CLICKHOUSE_PASSWORD:?Environment variable CLICKHOUSE_PASSWORD is not set}"
+CLICKHOUSE_HOST="${CLICKHOUSE_HOST:?Environment variable CLICKHOUSE_HOST is not set}"
+
 # Ensure at least eleven parameters are provided
-if [ $# -lt 11 ]; then
-    echo -e "\nUsage: $0 N_THREADS DATABASE_NAME DIRECTORY INTERFACE FORMAT BATCH_SIZE SORTED COMPRESSOR CLICKHOUSE_USER CLICKHOUSE_PASSWORD CLICKHOUSE_HOST\n"
-    echo "Example: $0 4 my_database /data/hits http TabSeparated 100000 true none user password https://clickhouse-host:8443"
+if [ $# -lt 8 ]; then
+    echo -e "\nUsage: $0 N_THREADS DATABASE_NAME DIRECTORY INTERFACE FORMAT BATCH_SIZE SORTED COMPRESSOR\n"
+    echo "Example: $0 4 my_database /data/hits http TabSeparated 100000 true none"
     exit 1
 fi
 
@@ -22,12 +28,10 @@ FORMAT="$5"
 BATCH_SIZE="$6"
 SORTED="$7"
 COMPRESSOR="$8"
-CLICKHOUSE_USER="$9"
-CLICKHOUSE_PASSWORD="${10}"
-CLICKHOUSE_HOST="${11}"
+LIMIT="${9:-0}"  # Default to 0 (no limit)
 
 ERROR_LOG="multi_ingest_errors.log"
-RESULTS_DIR="results"
+RESULTS_DIR="results/multi_threaded"
 
 # Determine compressor label
 COMPRESSOR_LABEL="_$( [ "$COMPRESSOR" == "none" ] && echo "no_compression" || echo "$COMPRESSOR" )"
@@ -65,7 +69,7 @@ echo -e "\nCreating database and table..."
 
 # Launch N_THREADS instances of ingest_thread.sh in parallel with thread ID
 for ((i=1; i<=N_THREADS; i++)); do
-    ./ingest_thread.sh "$i" "$DATABASE_NAME" "$DIRECTORY" "$FORMAT" "$COMPRESSOR" "$CLICKHOUSE_USER" "$CLICKHOUSE_PASSWORD" "$CLICKHOUSE_HOST" &
+    ./ingest_thread.sh "$i" "$DATABASE_NAME" "$DIRECTORY" "$FORMAT" "$COMPRESSOR" "$CLICKHOUSE_USER" "$CLICKHOUSE_PASSWORD" "$CLICKHOUSE_HOST" "$LIMIT" &
 done
 
 # Wait for all background jobs to finish
@@ -95,18 +99,26 @@ SERVER_METRICS=$(echo "$SERVER_METRICS_RAW" | grep -v -E "^Row 1:|^────�
     }' | sed '$s/,$//')
 
 echo -e "\nRunning CPU and memory usage query for database: $DATABASE_NAME"
-CPU_MEMORY_QUERY=$(sed "s/{db_name}/$DATABASE_NAME/g; s/{table_name}/hits/g" cpu_memory_usage_over_time-whole_service-just_inserts.sql)
+CPU_MEMORY_QUERY=$(sed "s/{db_name}/$DATABASE_NAME/g; s/{table_name}/hits/g" cpu_memory_usage-whole_service.sql)
 
 # Extract CPU & memory usage directly from the query response
 CPU_MEMORY_USAGE_RAW=$(curl --silent --user "$CLICKHOUSE_USER:$CLICKHOUSE_PASSWORD" --data-binary "$CPU_MEMORY_QUERY" "$CLICKHOUSE_HOST/?database=system&query=")
 
-CPU_MEMORY_USAGE=$(echo "$CPU_MEMORY_USAGE_RAW" | grep "cpu_memory:" 2>/dev/null | sed 's/cpu_memory: //g' | tr -d '\n')
+CPU_MEMORY_USAGE=$(echo "$CPU_MEMORY_USAGE_RAW" | awk -F': ' '
+    /^cpu_usage_50th:/ {print "    \"cpu_usage_50th\": " $2 ","}
+    /^cpu_usage_95th:/ {print "    \"cpu_usage_95th\": " $2 ","}
+    /^cpu_usage_99th:/ {print "    \"cpu_usage_99th\": " $2 ","}
+    /^memory_usage_50th:/ {print "    \"memory_usage_50th\": " $2 ","}
+    /^memory_usage_95th:/ {print "    \"memory_usage_95th\": " $2 ","}
+    /^memory_usage_99th:/ {print "    \"memory_usage_99th\": " $2 ","}
+    /^memory_usage_50th_readable:/ {print "    \"memory_usage_50th_readable\": \"" $2 "\","}
+    /^memory_usage_95th_readable:/ {print "    \"memory_usage_95th_readable\": \"" $2 "\","}
+    /^memory_usage_99th_readable:/ {print "    \"memory_usage_99th_readable\": \"" $2 "\""}' )
 
 # Drop database and table at the end
 echo -e "\nDropping database and table..."
 ./drop_db.sh "$DATABASE_NAME" "$CLICKHOUSE_USER" "$CLICKHOUSE_PASSWORD" "$CLICKHOUSE_HOST"
 
 # Generate JSON result
-echo -e "{\n  \"client_machine\": \"$CLIENT_MACHINE\",\n  \"server_system\": \"$SERVER_SYSTEM\",\n  \"date\": \"$DATE_TODAY\",\n  \"threads\": $N_THREADS,\n  \"interface\": \"$INTERFACE\",\n  \"format\": \"$FORMAT\",\n  \"total_num_rows\": $TOTAL_NUM_ROWS,\n  \"batch_size\": \"$BATCH_SIZE\",\n  \"sorted\": \"$SORTED\",\n  \"compressor\": \"$COMPRESSOR\",\n  \"server_metrics\": {\n$SERVER_METRICS\n  },\n  \"cpu_memory_usage\": \"$CPU_MEMORY_USAGE\"\n}" > "$RESULT_JSON"
-
+echo -e "{\n  \"client_machine\": \"$CLIENT_MACHINE\",\n  \"server_system\": \"$SERVER_SYSTEM\",\n  \"date\": \"$DATE_TODAY\",\n  \"threads\": $N_THREADS,\n  \"interface\": \"$INTERFACE\",\n  \"format\": \"$FORMAT\",\n  \"total_num_rows\": $TOTAL_NUM_ROWS,\n  \"batch_size\": \"$BATCH_SIZE\",\n  \"sorted\": \"$SORTED\",\n  \"compressor\": \"$COMPRESSOR\",\n  \"server_metrics\": {\n$SERVER_METRICS\n  },\n  \"cpu_memory_usage_multi_threaded\": {\n$CPU_MEMORY_USAGE\n  }\n}" > "$RESULT_JSON"
 echo "Results saved to $RESULT_JSON"

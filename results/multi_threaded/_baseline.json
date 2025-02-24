@@ -1,0 +1,15 @@
+{
+  "server_system": "ClickHouse Cloud 24.10 30 vCPU and 120 GiB per replica / 3 replicas",
+  "date": "2025-02-23",
+  "cpu_memory_usage_baseline": {
+    "cpu_usage_50th":             0,
+    "cpu_usage_95th":             0.1369,
+    "cpu_usage_99th":             0.4102,
+    "memory_usage_50th":          1409475752,
+    "memory_usage_95th":          1458754034,
+    "memory_usage_99th":          1473110035,
+    "memory_usage_50th_readable": "1.31 GiB",
+    "memory_usage_95th_readable": "1.36 GiB",
+    "memory_usage_99th_readable": "1.37 GiB"
+  }
+}
