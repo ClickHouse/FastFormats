@@ -14,9 +14,9 @@ WITH
         ORDER BY event_time ASC),
     T2 AS (
         SELECT
-            groupArray(round(ProfileEvents['OSCPUVirtualTimeMicroseconds'] / 1_000_000, 2)) as cpu_usage_pct,
-            groupArray(memory_usage) as memory_usage_bytes,
-            groupArray(formatReadableSize(memory_usage)) as memory_usage_readable,
+            groupArray(round(ProfileEvents['OSCPUVirtualTimeMicroseconds'] / 1_000_000, 2)) AS cpu_usage_pct,
+            groupArray(memory_usage) AS memory_usage_bytes,
+            groupArray(formatReadableSize(memory_usage)) AS memory_usage_readable,
             arrayEnumerate(cpu_usage_pct) AS num
         FROM
             T1)

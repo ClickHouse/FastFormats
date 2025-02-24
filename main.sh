@@ -215,7 +215,9 @@ save_json_metrics() {
     metrics_file=$(get_server_metrics_file "$interface" "$format" "$sorted" "$compressor" "$batch_size")
     metrics_content=$(grep -v -E "^Row 1:|^──────" "$metrics_file" 2>/dev/null | awk '{
         key=$1;
-        value=substr($0, index($0, $2));
+        sub(/:$/, "", key);  # Remove trailing colon from key
+        $1="";               # Remove the key from the line
+        value=substr($0, 2); # Trim leading space
         if (value ~ /[A-Za-z]/) {
             print "    \"" key "\": \"" value "\",";
         } else {
@@ -291,26 +293,75 @@ should_ingest() {
     return 1  # Otherwise, do not ingest
 }
 
-# batch_sizes=("100000" "500000" "1000000" "10000")
-# batch_sizes=("500000" "1000000" "10000")
-batch_sizes=("100000")
-# formats=("TabSeparatedWithNames" "Native" "Parquet" "Arrow" "ArrowStream" "JSONEachRow" "Avro" "RowBinary")
-# formats=("TabSeparatedWithNames" "Native" "Parquet" "Arrow" "ArrowStream" "JSONEachRow")
-formats=("Native" "ArrowStream" "JSONEachRow")
-# formats=("TabSeparatedWithNames" "Native")
-# input_format_for_native_interface=("TabSeparatedWithNames" "JSONEachRow" "Native")
+batch_sizes=("10000" "100000" "500000" "1000000")
+
+formats=(
+    "Arrow"
+    "ArrowStream"
+    "Avro"
+    "BSONEachRow"
+    "CSV"
+    "CSVWithNames"
+    "CSVWithNamesAndTypes"
+    "CapnProto"
+    "CustomSeparated"
+    "CustomSeparatedWithNames"
+    "CustomSeparatedWithNamesAndTypes"
+    "JSON"
+    "JSONColumns"
+    "JSONColumnsWithMetadata"
+    "JSONCompact"
+    "JSONCompactColumns"
+    "JSONCompactEachRow"
+    "JSONCompactEachRowWithNames"
+    "JSONCompactEachRowWithNamesAndTypes"
+    "JSONCompactStringsEachRow"
+    "JSONCompactStringsEachRowWithNames"
+    "JSONCompactStringsEachRowWithNamesAndTypes"
+    "JSONEachRow"
+    "JSONLines"
+    "JSONObjectEachRow"
+    "JSONStringsEachRow"
+#     "LineAsString"
+    "MsgPack"
+    "NDJSON"
+    "Native"
+#     "Npy"
+    "ORC"
+    "Parquet"
+    "Protobuf"
+#     "ProtobufList"
+#     "ProtobufSingle"
+#     "Raw"
+#     "RawBLOB"
+#     "RawWithNames"
+#     "RawWithNamesAndTypes"
+    "RowBinary"
+    "RowBinaryWithNames"
+    "RowBinaryWithNamesAndTypes"
+    "TSKV"
+    "TSV"
+#     "TSVRaw"
+#     "TSVRawWithNames"
+#     "TSVRawWithNamesAndTypes"
+    "TSVWithNames"
+    "TSVWithNamesAndTypes"
+    "TabSeparated"
+#     "TabSeparatedRaw"
+#     "TabSeparatedRawWithNames"
+#     "TabSeparatedRawWithNamesAndTypes"
+    "TabSeparatedWithNames"
+    "TabSeparatedWithNamesAndTypes"
+#     "Template"
+    "Values"
+)
 input_format_for_native_interface=("TabSeparatedWithNames" "JSONEachRow" "Native")
+
 sortings=("true" "false")
-# sortings=("true")
-# compressors=("none" "gzip" "lz4" "zstd")
-compressors=("zstd" "lz4" "none")
-# compressors=("zstd")
 
-# interfaces=("http" "native")
-# interfaces=("http" "native")
-interfaces=("http")
+compressors=("lz4" "zstd" "none")
 
-
+interfaces=("http" "native")
 
 for batch_size in "${batch_sizes[@]}"; do
 
