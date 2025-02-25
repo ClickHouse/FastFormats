@@ -15,6 +15,7 @@ mkdir -p "$RESULTS_DIR"
 # New JSON filename format: multi_threaded-N_THREADS-INTERFACE-FORMAT-BATCH_SIZE-SORTED-COMPRESSOR.json
 BASELINE_JSON="$RESULTS_DIR/_baseline.json"
 
+
 echo -e "\nSleeping for 5 minutes before running baseline metrics query..."
 sleep 300
 
@@ -44,27 +45,25 @@ ingest_and_wait() {
     local format="$1"
     local directory="$2"
     local compressor="$3"
+    local batch_size="$4"
+    local num_sequential_inserts="$5"
     local format_lower=$(echo "$format" | tr '[:upper:]' '[:lower:]')
 
     TIMESTAMP=$(date +"%Y_%m_%d_%H_%M")
 
-    echo -e "\nStarting ingestion for format: $format..."
+    echo -e "\nStarting ingestion for format: $format with batch size: $batch_size and $num_sequential_inserts sequential inserts..."
 
-    ./multi_threaded_ingest.sh 1  "multi_threaded_ingest_${format_lower}_001_${TIMESTAMP}"  "$directory" http "$format" 10000 false "$compressor" 200
-    ./multi_threaded_ingest.sh 5  "multi_threaded_ingest_${format_lower}_005_${TIMESTAMP}"  "$directory" http "$format" 10000 false "$compressor" 200
-    ./multi_threaded_ingest.sh 10 "multi_threaded_ingest_${format_lower}_010_${TIMESTAMP}"    "$directory" http "$format" 10000 false "$compressor" 200
+    ./multi_threaded_ingest.sh 1   "multi_threaded_ingest_${format_lower}_001_${TIMESTAMP}"  "$directory" http "$format" "$batch_size" false "$compressor" "$num_sequential_inserts"
+    ./multi_threaded_ingest.sh 5   "multi_threaded_ingest_${format_lower}_005_${TIMESTAMP}"  "$directory" http "$format" "$batch_size" false "$compressor" "$num_sequential_inserts"
+    ./multi_threaded_ingest.sh 10  "multi_threaded_ingest_${format_lower}_010_${TIMESTAMP}"  "$directory" http "$format" "$batch_size" false "$compressor" "$num_sequential_inserts"
 
     echo -e "Completed ingestion for format: $format\n"
 }
 
 # Ingest each format with appropriate directories and compression settings
-ingest_and_wait "Native"        "/home/ubuntu/data/hits/split/native_10000"             "lz4"
-ingest_and_wait "ArrowStream"   "/home/ubuntu/data/hits/split/arrowstream_10000_lz4"    "none"
-ingest_and_wait "RowBinary"     "/home/ubuntu/data/hits/split/rowbinary_10000"          "lz4"
-ingest_and_wait "TSV"           "/home/ubuntu/data/hits/split/tsv_10000"                "lz4"
-ingest_and_wait "Parquet"       "/home/ubuntu/data/hits/split/parquet_10000_lz4"        "none"
-ingest_and_wait "CSV"           "/home/ubuntu/data/hits/split/csv_10000"                "lz4"
-ingest_and_wait "BSONEachRow"   "/home/ubuntu/data/hits/split/bsoneachrow_10000"        "lz4"
-ingest_and_wait "JSONEachRow"   "/home/ubuntu/data/hits/split/jsoneachrow_10000"        "lz4"
+ingest_and_wait "Native"        "/home/ubuntu/data/hits/split/native_10000"               "lz4"   10000 200
+ingest_and_wait "Native"        "/home/ubuntu/data/hits/split/native_100000"              "lz4"  100000 50
+ingest_and_wait "Native"        "/home/ubuntu/data/hits/split/native_1000000"             "lz4" 1000000 10
+
 
 echo -e "\nAll ingestion tasks completed successfully."
