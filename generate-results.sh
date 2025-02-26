@@ -27,7 +27,6 @@ fi
     "sorted": .sorted,
     "server_metrics":
     {
-        "total_time_including_client_loop_s": .server_metrics.total_time_including_client_loop_s,
         "total_insert_duration_s": .server_metrics.total_insert_duration_s,
         "total_received_bytes": .server_metrics.total_received_bytes,
         "memory_usage_bytes_99th": .server_metrics.memory_usage_bytes_99th,
