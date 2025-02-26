@@ -90,30 +90,4 @@ After setting up credentials, start the benchmark:
 
 ### 4. Analyze results
 
-Once the benchmark completes, results are stored in the `results` folder. 
-
-
-## Avoiding Artificial Insert Slowdowns
-
-ClickHouse includes built-in safeguards to prevent excessive resource usage when creating and [merging](https://clickhouse.com/docs/en/merges) parts. If the number of active parts in a single [partition](partition) exceeds the [parts_to_delay_insert](https://clickhouse.com/docs/en/operations/settings/merge-tree-settings#parts-to-delay-insert) threshold, ClickHouse artificially slows down inserts to allow background merges to keep up. If the number of parts surpasses [parts_to_throw_insert](https://clickhouse.com/docs/en/operations/settings/merge-tree-settings#parts-to-throw-insert), INSERTs fail with a `Too many parts` error.
-
-Our benchmark evaluates each combination of **batch size, format, pre-sorting, and compression** using an **isolated sequence of inserts** into ClickHouse. We perform up to **1000 sequential inserts** for the smallest batch size (1k rows per insert), each creating a single part, scaling by **N** when measuring the impact of **N parallel clients**. No extra workload is generated on ClickHouse, aside from automatic background merges of inserted parts.
-
-To prevent artificial slowdowns and failed inserts:
-- We [increase](https://github.com/ClickHouse/FastFormats/blob/c6457ff17be6016d7b59543b62ad332b6f382858/ddl-hits.sql#L113) both the `parts_to_delay_insert` and `parts_to_throw_insert` thresholds.
-- The target table is [dropped](https://github.com/ClickHouse/FastFormats/blob/c6457ff17be6016d7b59543b62ad332b6f382858/main.sh#L178) after each run to minimize the number of parts on the server.
-- Automatic insert deduplication is [disabled](https://github.com/ClickHouse/FastFormats/blob/c6457ff17be6016d7b59543b62ad332b6f382858/ddl-hits.sql#L116) to allow parallel inserts with identical data when testing input format performance with concurrent clients.
-- We [track](https://github.com/ClickHouse/FastFormats/blob/c6457ff17be6016d7b59543b62ad332b6f382858/metrics.sql#L33) occurrences of artificial slowdowns in the test results but did not observe any in our benchmarks.
-
-> ⚠️ **Note:** These threshold modifications and settings are applied **only for benchmarking purposes** on a dedicated ClickHouse system. We do **not recommend adjusting them in production environments.**
-
-## ⚠️ Disclaimer: Designed for ClickHouse Cloud  
-
-FastFormats is currently optimized to run against a **ClickHouse Cloud** service.  
-
-- Benchmark SQL queries for fetching **performance metrics** rely on `clusterAllReplicas('default')`, assuming a **default cluster setup**.
-- If running FastFormats **on a self-hosted ClickHouse instance**, you may need to **adjust queries** in [`metrics.sql`](https://github.com/ClickHouse/FastFormats/blob/main/metrics.sql) and other scripts that use cluster-level functions.
-
-> **Future versions** will include support for self-hosted ClickHouse setups with configurable cluster settings.
-
-
+Once the benchmark completes, results are stored in the `results` folder.
