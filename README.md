@@ -107,4 +107,13 @@ To prevent artificial slowdowns and failed inserts:
 
 > ⚠️ **Note:** These threshold modifications and settings are applied **only for benchmarking purposes** on a dedicated ClickHouse system. We do **not recommend adjusting them in production environments.**
 
+## ⚠️ Disclaimer: Designed for ClickHouse Cloud  
+
+FastFormats is currently optimized to run against a **ClickHouse Cloud** service.  
+
+- Benchmark SQL queries for fetching **performance metrics** rely on `clusterAllReplicas('default')`, assuming a **default cluster setup**.
+- If running FastFormats **on a self-hosted ClickHouse instance**, you may need to **adjust queries** in [`metrics.sql`](https://github.com/ClickHouse/FastFormats/blob/main/metrics.sql) and other scripts that use cluster-level functions.
+
+> **Future versions** will include support for self-hosted ClickHouse setups with configurable cluster settings.
+
 
