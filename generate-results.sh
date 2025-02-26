@@ -28,9 +28,10 @@ fi
     "server_metrics":
     {
         "total_time_including_client_loop_s": .server_metrics.total_time_including_client_loop_s,
+        "total_insert_duration_s": .server_metrics.total_insert_duration_s,
         "total_received_bytes": .server_metrics.total_received_bytes,
-        "memory_usage_bytes_50th": .server_metrics.memory_usage_bytes_50th,
-        "cpu_ms_50th": .server_metrics.cpu_ms_50th
+        "memory_usage_bytes_99th": .server_metrics.memory_usage_bytes_99th,
+        "total_cpu_s": .server_metrics.total_cpu_s
     }
 }' "${file}" || echo "Error in $file" >&2
         FIRST=0
