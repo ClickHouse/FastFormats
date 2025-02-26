@@ -101,4 +101,7 @@ WHERE
     AND is_initial_query
     AND query_kind = 'Insert'
     AND type = 'QueryFinish'
-FORMAT Vertical;
+FORMAT Vertical
+SETTINGS
+    skip_unavailable_shards = 1,
+    output_format_pretty_single_large_number_tip_threshold = 0;
