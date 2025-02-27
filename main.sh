@@ -42,7 +42,10 @@ declare -A FORMATS_WITH_BUILT_IN_COMPRESSION_SETTINGS_MAP=(
 )
 
 
-
+# Some formats require special settings
+declare -A EXTRA_SETTINGS_MAP=(
+    ["ProtobufList"]="format_schema='hits.proto:MessageType'"
+)
 
 
 # Default values
@@ -102,6 +105,8 @@ convert() {
     if [[ -n "${FORMATS_WITH_BUILT_IN_COMPRESSION_SETTINGS_MAP[${format}_${compressor}]}" ]]; then
         output_dir="${output_dir}_${compressor}"
         extra_settings="${FORMATS_WITH_BUILT_IN_COMPRESSION_SETTINGS_MAP[${format}_${compressor}]}"
+    elif [[ -n "${EXTRA_SETTINGS_MAP[${format}]}" ]]; then
+        extra_settings="${EXTRA_SETTINGS_MAP[${format}]}"
     else
         extra_settings=""
     fi
