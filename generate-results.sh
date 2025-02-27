@@ -21,7 +21,6 @@ fi
 {
     "source": "'${file}'",
     "format": .format,
-    "interface": .interface,
     "batch_size": .batch_size,
     "compressor": .compressor,
     "sorted": .sorted,

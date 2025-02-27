@@ -204,9 +204,6 @@
     </style>
     <script type="text/javascript">
 
-const queries = [
-];
-
 const data = [
 {"source":"results/http_arrow_1000000_sorted_lz4.json","format":"Arrow","interface":"http","batch_size":1000000,"compressor":"lz4","sorted":true,"server_metrics":{"total_insert_duration_s":37.17,"total_received_bytes":2456771420,"memory_usage_bytes_99th":836196098,"total_cpu_s":29.48}}
 ,{"source":"results/http_arrow_1000000_sorted_no_compression.json","format":"Arrow","interface":"http","batch_size":1000000,"compressor":"none","sorted":true,"server_metrics":{"total_insert_duration_s":51.83,"total_received_bytes":6845953908,"memory_usage_bytes_99th":2416968280,"total_cpu_s":36.86}}
@@ -1130,12 +1127,6 @@ const data = [
         </td>
     </tr>
     <tr>
-        <th>Interface: </th>
-        <td id="selectors_interface">
-            <a id="select-all-interfaces" class="selector selector-active">All</a>
-        </td>
-    </tr>
-    <tr>
         <th>Batch Size: </th>
         <td id="selectors_batch_size">
             <a id="select-all-batch_sizes" class="selector selector-active">All</a>
@@ -1179,7 +1170,6 @@ const data = [
 
 let selectors = {
     "format": {},
-    "interface": {http: true, native: true},
     "batch_size": {'10000': false, '100000': true, '500000': false, '1000000': false},
     "presorted": {'false': true, 'true': false},
     "compression": {'none': true, 'lz4': true, 'zstd': true},
@@ -1198,7 +1188,6 @@ let theme = 'dark';
 /// Generate selectors
 
 let formats = document.getElementById('selectors_format');
-let interfaces = document.getElementById('selectors_interface');
 let batch_sizes = document.getElementById('selectors_batch_size');
 let presorteds = document.getElementById('selectors_presorted');
 let compressions = document.getElementById('selectors_compression');
@@ -1269,7 +1258,6 @@ function generateSelectors(container, selector_name, highlight) {
 }
 
 generateSelectors(formats, 'format', true)
-generateSelectors(interfaces, 'interface', false);
 generateSelectors(batch_sizes, 'batch_size', false);
 generateSelectors(presorteds, 'presorted', false);
 generateSelectors(compressions, 'compression', false);
@@ -1300,7 +1288,6 @@ function updateSelector(container, selector_name) {
 
 function updateSelectors() {
     updateSelector(formats, 'format')
-    updateSelector(interfaces, 'interface');
     updateSelector(batch_sizes, 'batch_size');
     updateSelector(presorteds, 'presorted');
     updateSelector(compressions, 'compression');
@@ -1354,7 +1341,7 @@ function renderSummary(filtered_data) {
         td_name.className = 'summary-name';
 
         let link = document.createElement('a');
-        link.appendChild(document.createTextNode(`${elem.format}${elem.compressor != 'none' ? '.' + elem.compressor: ''} over ${elem.interface}${elem.sorted ? ' (presorted)' : ''}, batch ${formatBatchSize(elem.batch_size)}`));
+        link.appendChild(document.createTextNode(`${elem.format}${elem.compressor != 'none' ? '.' + elem.compressor: ''}${elem.sorted ? ' (presorted)' : ''}, batch ${formatBatchSize(elem.batch_size)}`));
         link.href = "https://github.com/ClickHouse/FastFormats/blob/main/" + elem.source;
         td_name.appendChild(link);
         td_name.appendChild(document.createTextNode(': '));
@@ -1394,7 +1381,6 @@ function renderSummary(filtered_data) {
 function render() {
     let filtered_data = data.filter(elem =>
         selectors.format[elem.format] &&
-        selectors.interface[elem.interface] &&
         selectors.batch_size[elem.batch_size] &&
         selectors.presorted[elem.sorted] &&
         selectors.compression[elem.compressor]
