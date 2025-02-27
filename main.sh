@@ -308,7 +308,7 @@ formats=(
     "ORC"
     "Parquet"
     "Protobuf"
-#     "ProtobufList"
+    "ProtobufList"
 #     "ProtobufSingle"
 #     "Raw"
 #     "RawBLOB"
